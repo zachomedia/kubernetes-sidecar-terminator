@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sidecar-terminator
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: sidecar-terminator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sidecar-terminator
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sidecar-terminator
+    spec:
+      serviceAccountName: sidecar-terminator
+      containers:
+      - image: zachomedia/kubernetes-sidecar-terminator
+        name: sidecar-terminator
+        resources:
+          requests:
+            cpu: 10m
+            memory: 30M
+          limits:
+            cpu: 100m
+            memory: 100M
