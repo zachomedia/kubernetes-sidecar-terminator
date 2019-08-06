@@ -6,7 +6,20 @@ metadata:
   labels:
     app.kubernetes.io/name: sidecar-terminator
 rules:
-- apiGroups: ["coordination.k8s.io"]
-  resources: ["leases"]
-  verbs: ["get","list","create","update","watch","patch","delete"]
-  resourceNames: ["sidecar-terminator"]
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resourceNames:
+  - sidecar-terminator
+  resources:
+  - leases
+  verbs:
+  - get
+  - update
+  - watch
+  - patch
