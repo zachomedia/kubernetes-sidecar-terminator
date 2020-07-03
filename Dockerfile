@@ -1,5 +1,5 @@
 # Build with the golang image
-FROM golang:1.12-alpine AS build
+FROM golang:1.14-alpine AS build
 
 ENV GO111MODULE on
 
