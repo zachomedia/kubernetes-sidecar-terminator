@@ -3,7 +3,11 @@ package sidecarterminator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
+	"strconv"
+	"strings"
+	"syscall"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -23,18 +27,35 @@ type SidecarTerminator struct {
 
 	eventHandler *sidecarTerminatorEventHandler
 
-	sidecars   []string
+	sidecars   map[string]int
 	namespaces []string
 }
 
 // NewSidecarTerminator returns a new SidecarTerminator instance.
-func NewSidecarTerminator(config *rest.Config, clientset *kubernetes.Clientset, sidecars, namespaces []string) (*SidecarTerminator, error) {
+func NewSidecarTerminator(config *rest.Config, clientset *kubernetes.Clientset, sidecarsstr, namespaces []string) (*SidecarTerminator, error) {
 	if config == nil {
 		return nil, errors.New("config cannot be nil")
 	}
 
 	if clientset == nil {
 		return nil, errors.New("clientset cannot be nil")
+	}
+
+	sidecars := map[string]int{}
+	for _, sidecar := range sidecarsstr {
+		comp := strings.Split(sidecar, "=")
+		if len(comp) == 1 {
+			sidecars[comp[0]] = int(syscall.SIGTERM)
+		} else if len(comp) == 2 {
+			num, err := strconv.Atoi(comp[1])
+			if err != nil {
+				return nil, err
+			}
+
+			sidecars[comp[0]] = num
+		} else {
+			return nil, fmt.Errorf("incorrect sidecar container name format: %s", sidecar)
+		}
 	}
 
 	return &SidecarTerminator{
@@ -117,10 +138,10 @@ func (st *SidecarTerminator) terminate(pod *v1.Pod) error {
 
 	for _, sidecar := range pod.Status.ContainerStatuses {
 		if isSidecarContainer(sidecar.Name, st.sidecars) && sidecar.State.Running != nil {
-			klog.Infof("Terminating sidecar %s from %s", sidecar.Name, podName(pod))
+			klog.Infof("Terminating sidecar %s from %s with signal %d", sidecar.Name, podName(pod), st.sidecars[sidecar.Name])
 			parameterCodec := runtime.NewParameterCodec(scheme)
 			req.VersionedParams(&v1.PodExecOptions{
-				Command:   []string{"/bin/kill", "1"},
+				Command:   []string{"/bin/kill", "-s", strconv.Itoa(st.sidecars[sidecar.Name]), "1"},
 				Container: sidecar.Name,
 				Stdin:     false,
 				Stdout:    true,

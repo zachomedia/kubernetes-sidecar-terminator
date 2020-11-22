@@ -21,8 +21,8 @@ func isOwnedByJob(references []metav1.OwnerReference) bool {
 	return false
 }
 
-func isSidecarContainer(name string, sidecars []string) bool {
-	for _, containerName := range sidecars {
+func isSidecarContainer(name string, sidecars map[string]int) bool {
+	for containerName := range sidecars {
 		if name == containerName {
 			return true
 		}
@@ -31,7 +31,7 @@ func isSidecarContainer(name string, sidecars []string) bool {
 	return false
 }
 
-func isCompleted(pod *v1.Pod, sidecars []string) bool {
+func isCompleted(pod *v1.Pod, sidecars map[string]int) bool {
 	if pod.Status.Phase == v1.PodRunning {
 		complete := true
 
