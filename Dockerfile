@@ -21,4 +21,5 @@ RUN CGO_ENABLED=0 go install .
 # Generate final image
 FROM scratch
 COPY --from=build /go/bin/kubernetes-sidecar-terminator /kubernetes-sidecar-terminator
+USER 100
 ENTRYPOINT [ "/kubernetes-sidecar-terminator" ]
