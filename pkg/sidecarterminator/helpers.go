@@ -2,6 +2,7 @@ package sidecarterminator
 
 import (
 	"fmt"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,7 +14,13 @@ func podName(pod *v1.Pod) string {
 
 func isOwnedByJob(references []metav1.OwnerReference) bool {
 	for _, ref := range references {
+		// Jobs
 		if ref.APIVersion == "batch/v1" && ref.Kind == "Job" {
+			return true
+		}
+
+		// Argo Workflows
+		if strings.HasPrefix(ref.APIVersion, "argoproj.io/") && ref.Kind == "Workflow" {
 			return true
 		}
 	}
