@@ -43,11 +43,20 @@ func isCompleted(pod *v1.Pod, sidecars map[string]int) bool {
 		complete := true
 
 		for _, containerStatus := range pod.Status.ContainerStatuses {
+			// Ignore the status of sidecar containers
 			if isSidecarContainer(containerStatus.Name, sidecars) {
 				continue
 			}
 
-			complete = complete && containerStatus.State.Terminated != nil && containerStatus.State.Terminated.ExitCode == 0
+			// Check that the container is terminated
+			containerComplete := containerStatus.State.Terminated != nil
+
+			// If the restart policy is not Never, then let's ensure the container has exited with a successful error code (exit code 0)
+			if pod.Spec.RestartPolicy != v1.RestartPolicyNever {
+				containerComplete = containerComplete && containerStatus.State.Terminated.ExitCode == 0
+			}
+
+			complete = complete && containerComplete
 		}
 
 		return complete
