@@ -182,7 +182,7 @@ func init() {
 
 	rootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to the kubeconfig file")
 	rootCmd.Flags().StringArrayVar(&namespaces, "namespaces", []string{}, "namespaces to monitor (leave empty for all namespaces)")
-	rootCmd.Flags().StringArrayVar(&sidecars, "sidecars", []string{"istio-proxy", "vault-agent", "pgbouncer=2"}, "list of sidecar container names (optionally add =# to change the signal number used (=2 for SIGINT)), SIGTERM is the default)")
+	rootCmd.Flags().StringArrayVar(&sidecars, "sidecars", []string{"istio-proxy", "vault-agent", "pgbouncer=2", "proxysql"}, "list of sidecar container names (optionally add =# to change the signal number used (=2 for SIGINT)), SIGTERM is the default)")
 
 	// Lock info
 	rootCmd.Flags().StringVar(&lockName, "lock-name", "sidecar-terminator", "name of the lock")
