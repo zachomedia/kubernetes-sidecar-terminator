@@ -125,6 +125,28 @@ func (st *SidecarTerminator) terminate(pod *v1.Pod) error {
 	klog.Infof("Terminating running sidecar containers from %s", podName(pod))
 
 	// Terminate the sidecar
+	for _, sidecar := range pod.Status.ContainerStatuses {
+		if isSidecarContainer(sidecar.Name, st.sidecars) && sidecar.State.Running != nil {
+			klog.Infof("Terminating sidecar %s from %s with signal %d", sidecar.Name, podName(pod), st.sidecars[sidecar.Name])
+
+			err = st.terminateSidecarCommand(pod, sidecar.Name, []string{"/bin/kill", "-s", strconv.Itoa(st.sidecars[sidecar.Name]), "1"})
+			if err != nil {
+				// Try the shell version
+				klog.Errorf("Failed to terminate: %v", err)
+				klog.Warningf("Failed using using standard approach.. trying shell approach")
+
+				err = st.terminateSidecarCommand(pod, sidecar.Name, []string{"/bin/sh", "-c", fmt.Sprintf("kill -s \"%s\" 1", strconv.Itoa(st.sidecars[sidecar.Name]))})
+				if err != nil {
+					klog.Errorf("Failed to terminate: %v", err)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (st *SidecarTerminator) terminateSidecarCommand(pod *v1.Pod, sidecar string, command []string) error {
 	req := st.clientset.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Namespace(pod.Namespace).
@@ -132,36 +154,30 @@ func (st *SidecarTerminator) terminate(pod *v1.Pod) error {
 		SubResource("exec")
 	scheme := runtime.NewScheme()
 
-	if err = v1.AddToScheme(scheme); err != nil {
+	if err := v1.AddToScheme(scheme); err != nil {
 		return err
 	}
 
-	for _, sidecar := range pod.Status.ContainerStatuses {
-		if isSidecarContainer(sidecar.Name, st.sidecars) && sidecar.State.Running != nil {
-			klog.Infof("Terminating sidecar %s from %s with signal %d", sidecar.Name, podName(pod), st.sidecars[sidecar.Name])
-			parameterCodec := runtime.NewParameterCodec(scheme)
-			req.VersionedParams(&v1.PodExecOptions{
-				Command:   []string{"/bin/kill", "-s", strconv.Itoa(st.sidecars[sidecar.Name]), "1"},
-				Container: sidecar.Name,
-				Stdin:     false,
-				Stdout:    true,
-				Stderr:    false,
-				TTY:       false,
-			}, parameterCodec)
+	parameterCodec := runtime.NewParameterCodec(scheme)
+	req.VersionedParams(&v1.PodExecOptions{
+		Command:   command,
+		Container: sidecar,
+		Stdin:     false,
+		Stdout:    true,
+		Stderr:    false,
+		TTY:       false,
+	}, parameterCodec)
 
-			exec, err := remotecommand.NewSPDYExecutor(st.config, "POST", req.URL())
-			if err != nil {
-				klog.Errorf("Failed to execute: %s", err)
-			}
-			err = exec.Stream(remotecommand.StreamOptions{
-				Stdout: ioutil.Discard,
-				Tty:    false,
-			})
-			if err != nil {
-				klog.Errorf("Failed to execute: %s", err)
-			}
-		}
+	exec, err := remotecommand.NewSPDYExecutor(st.config, "POST", req.URL())
+	if err != nil {
+		klog.Errorf("Failed to execute: %s", err)
 	}
-
-	return nil
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdout: ioutil.Discard,
+		Tty:    false,
+	})
+	if err != nil {
+		klog.Errorf("Failed to execute: %s", err)
+	}
+	return err
 }
