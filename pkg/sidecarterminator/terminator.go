@@ -140,7 +140,7 @@ func (st *SidecarTerminator) terminate(pod *v1.Pod) error {
 				},
 			})
 
-			_, err := st.clientset.CoreV1().Pods(pod.Namespace).Update(context.TODO(), pod, metav1.UpdateOptions{})
+			_, err := st.clientset.CoreV1().Pods(pod.Namespace).UpdateEphemeralContainers(context.TODO(), pod.Name, pod, metav1.UpdateOptions{})
 			if err != nil {
 				return err
 			}
