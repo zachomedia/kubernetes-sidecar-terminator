@@ -1,7 +1,5 @@
 # Build with the golang image
-FROM golang:1.15-alpine AS build
-
-ENV GO111MODULE on
+FROM golang:1.19-alpine AS build
 
 # Add git
 RUN apk add git
