@@ -48,6 +48,7 @@ import (
 var kubeconfig string
 var sidecars []string
 var namespaces []string
+var terminatorImage string
 var lockName string
 var lockNamespace string
 var lockUseConfigMap bool
@@ -131,7 +132,7 @@ has completed`,
 			cancel()
 		}()
 
-		terminator, err := sidecarterminator.NewSidecarTerminator(config, client, sidecars, namespaces)
+		terminator, err := sidecarterminator.NewSidecarTerminator(config, client, terminatorImage, sidecars, namespaces)
 		if err != nil {
 			klog.Fatal(err)
 		}
@@ -183,6 +184,7 @@ func init() {
 	rootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to the kubeconfig file")
 	rootCmd.Flags().StringArrayVar(&namespaces, "namespaces", []string{}, "namespaces to monitor (leave empty for all namespaces)")
 	rootCmd.Flags().StringArrayVar(&sidecars, "sidecars", []string{"istio-proxy", "vault-agent", "pgbouncer=2", "proxysql"}, "list of sidecar container names (optionally add =# to change the signal number used (=2 for SIGINT)), SIGTERM is the default)")
+	rootCmd.Flags().StringVar(&terminatorImage, "terminator-image", "alpine:latest", "the image to use for the ephemeral container used to kill the sidecar")
 
 	// Lock info
 	rootCmd.Flags().StringVar(&lockName, "lock-name", "sidecar-terminator", "name of the lock")

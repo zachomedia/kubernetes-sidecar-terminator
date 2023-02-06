@@ -28,18 +28,23 @@ type SidecarTerminator struct {
 
 	eventHandler *sidecarTerminatorEventHandler
 
-	sidecars   map[string]int
-	namespaces []string
+	terminatorImage string
+	sidecars        map[string]int
+	namespaces      []string
 }
 
 // NewSidecarTerminator returns a new SidecarTerminator instance.
-func NewSidecarTerminator(config *rest.Config, clientset *kubernetes.Clientset, sidecarsstr, namespaces []string) (*SidecarTerminator, error) {
+func NewSidecarTerminator(config *rest.Config, clientset *kubernetes.Clientset, terminatorImage string, sidecarsstr, namespaces []string) (*SidecarTerminator, error) {
 	if config == nil {
 		return nil, errors.New("config cannot be nil")
 	}
 
 	if clientset == nil {
 		return nil, errors.New("clientset cannot be nil")
+	}
+
+	if terminatorImage == "" {
+		return nil, errors.New("sidecarTerminatorImage cannot be empty")
 	}
 
 	sidecars := map[string]int{}
@@ -60,10 +65,11 @@ func NewSidecarTerminator(config *rest.Config, clientset *kubernetes.Clientset, 
 	}
 
 	return &SidecarTerminator{
-		config:     config,
-		clientset:  clientset,
-		sidecars:   sidecars,
-		namespaces: namespaces,
+		config:          config,
+		clientset:       clientset,
+		terminatorImage: terminatorImage,
+		sidecars:        sidecars,
+		namespaces:      namespaces,
 	}, nil
 }
 
@@ -141,7 +147,7 @@ func (st *SidecarTerminator) terminate(pod *v1.Pod) error {
 				TargetContainerName: sidecar.Name,
 				EphemeralContainerCommon: v1.EphemeralContainerCommon{
 					Name:  generateSidecarTerminatorName(sidecar.Name),
-					Image: "alpine:latest",
+					Image: st.terminatorImage,
 					Command: []string{
 						"kill",
 					},
