@@ -17,6 +17,10 @@ import (
 	"k8s.io/klog"
 )
 
+const (
+	SIDECAR_TERMINATOR_CONTAINER = "sidecar-terminator"
+)
+
 // SidecarTerminator defines an instance of the sidecar terminator.
 type SidecarTerminator struct {
 	config    *rest.Config
@@ -117,23 +121,32 @@ func (st *SidecarTerminator) Run(ctx context.Context) error {
 }
 
 func (st *SidecarTerminator) terminate(pod *v1.Pod) error {
-	klog.Infof("Terminating running sidecar containers from %s", podName(pod))
+	klog.Infof("Found running sidecar containers in %s", podName(pod))
 
 	// Terminate the sidecar
 	for _, sidecar := range pod.Status.ContainerStatuses {
-		if isSidecarContainer(sidecar.Name, st.sidecars) && sidecar.State.Running != nil {
+		if isSidecarContainer(sidecar.Name, st.sidecars) && sidecar.State.Running != nil && !hasSidecarTerminator(pod, sidecar) {
+
+			// TODO: Add ability to kill the proper process
+			// May require looking into the OCI image to extract the entrypoint if not
+			// available via the containers' command.
+			if *pod.Spec.ShareProcessNamespace {
+				klog.Error("Containers are sharing process namespace: ending process 1 will not end sidecars.")
+				return fmt.Errorf("unable to end sidecar %s in pod %s using shareProcessNamespace", sidecar.Name, podName(pod))
+			}
+
 			klog.Infof("Terminating sidecar %s from %s with signal %d", sidecar.Name, podName(pod), st.sidecars[sidecar.Name])
 
 			pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, v1.EphemeralContainer{
 				TargetContainerName: sidecar.Name,
 				EphemeralContainerCommon: v1.EphemeralContainerCommon{
-					Name:  "sidecar-terminator",
+					Name:  generateSidecarTerminatorName(sidecar.Name),
 					Image: "alpine:latest",
 					Command: []string{
-						"/bin/kill",
+						"kill",
 					},
 					Args: []string{
-						"-9",
+						fmt.Sprintf("-%d", st.sidecars[sidecar.Name]),
 						"1",
 					},
 					ImagePullPolicy: v1.PullAlways,
