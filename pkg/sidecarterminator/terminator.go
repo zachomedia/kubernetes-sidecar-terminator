@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	SIDECAR_TERMINATOR_CONTAINER = "sidecar-terminator"
+	SidecarTerminatorContainerNamePrefix = "sidecar-terminator"
 )
 
 // SidecarTerminator defines an instance of the sidecar terminator.
@@ -131,7 +131,7 @@ func (st *SidecarTerminator) terminate(pod *v1.Pod) error {
 
 	// Terminate the sidecar
 	for _, sidecar := range pod.Status.ContainerStatuses {
-		if isSidecarContainer(sidecar.Name, st.sidecars) && sidecar.State.Running != nil && !hasSidecarTerminator(pod, sidecar) {
+		if isSidecarContainer(sidecar.Name, st.sidecars) && sidecar.State.Running != nil && !hasSidecarTerminatorContainer(pod, sidecar) {
 
 			// TODO: Add ability to kill the proper process
 			// May require looking into the OCI image to extract the entrypoint if not
@@ -146,7 +146,7 @@ func (st *SidecarTerminator) terminate(pod *v1.Pod) error {
 			pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, v1.EphemeralContainer{
 				TargetContainerName: sidecar.Name,
 				EphemeralContainerCommon: v1.EphemeralContainerCommon{
-					Name:  generateSidecarTerminatorName(sidecar.Name),
+					Name:  generateSidecarTerminatorContainerName(sidecar.Name),
 					Image: st.terminatorImage,
 					Command: []string{
 						"kill",

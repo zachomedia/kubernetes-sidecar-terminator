@@ -65,9 +65,9 @@ func isCompleted(pod *v1.Pod, sidecars map[string]int) bool {
 	return false
 }
 
-func hasSidecarTerminator(pod *v1.Pod, sidecar v1.ContainerStatus) bool {
+func hasSidecarTerminatorContainer(pod *v1.Pod, sidecar v1.ContainerStatus) bool {
 	for _, ephCont := range pod.Spec.EphemeralContainers {
-		if ephCont.Name == generateSidecarTerminatorName(sidecar.Name) {
+		if ephCont.Name == generateSidecarTerminatorContainerName(sidecar.Name) {
 			return true
 		}
 	}
@@ -75,6 +75,6 @@ func hasSidecarTerminator(pod *v1.Pod, sidecar v1.ContainerStatus) bool {
 	return false
 }
 
-func generateSidecarTerminatorName(sidecarName string) string {
-	return fmt.Sprintf("%s-%s", SIDECAR_TERMINATOR_CONTAINER, sidecarName)
+func generateSidecarTerminatorContainerName(sidecarName string) string {
+	return fmt.Sprintf("%s-%s", SidecarTerminatorContainerNamePrefix, sidecarName)
 }
