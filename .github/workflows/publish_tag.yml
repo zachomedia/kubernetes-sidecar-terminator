@@ -1,0 +1,67 @@
+# This workflow will build a docker container, publish it to Azure Container Registry, and deploy it to Azure Kubernetes Service using a helm chart.
+#
+# https://github.com/Azure/actions-workflow-samples/tree/master/Kubernetes
+#
+# To configure this workflow:
+#
+# 1. Set up the following secrets in your workspace:
+#     a. REGISTRY_USERNAME with your registry username
+#     b. REGISTRY_PASSWORD with your registry password
+#
+# 2. Change the values for the REGISTRY_NAME, CLUSTER_NAME, CLUSTER_RESOURCE_GROUP and NAMESPACE environment variables (below).
+name: publish_tag
+on:
+  push:
+    tags:
+      - "*"
+
+# Environment variables available to all jobs and steps in this workflow
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+
+    - name: Set environment variables
+      shell: bash
+      run: |
+        echo "TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+
+    # Connect to Azure Container registry (ACR)
+    - uses: azure/docker-login@v1
+      with:
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+
+    # Container build
+    - name: Gather Metadata
+      id: meta
+      uses: crazy-max/ghaction-docker-meta@v2
+      with:
+        images: statcan/kubernetes-sidecar-terminator
+        labels: |
+          org.opencontainers.image.vendor=Statistics Canada
+          org.opencontainers.image.licenses=https://github.com/StatCan/kubernetes-sidecar-terminator/blob/${{ github.sha }}/LICENSE
+
+    - name: Build
+      id: docker_build
+      uses: docker/build-push-action@v2
+      with:
+        push: false
+        tags: statcan/kubernetes-sidecar-terminator:${{ env.TAG }}
+
+    # Scan image for vulnerabilities
+    - name: Scan
+      uses: Azure/container-scan@v0
+      with:
+        image-name: statcan/kubernetes-sidecar-terminator:${{ env.TAG }}
+        severity-threshold: CRITICAL
+        run-quality-checks: false
+
+    - name: Push
+      id: docker_push
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        tags: statcan/kubernetes-sidecar-terminator:${{ env.TAG }}
+        labels: ${{ steps.meta.outputs.labels }}
