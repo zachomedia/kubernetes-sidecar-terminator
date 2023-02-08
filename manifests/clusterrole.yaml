@@ -9,5 +9,5 @@ rules:
   resources: ["pods"]
   verbs: ["get","list","watch"]
 - apiGroups: [""]
-  resources: ["pods/exec"]
-  verbs: ["create"]
+  resources: ["pods/ephemeralcontainers"]
+  verbs: ["patch", "update"]
