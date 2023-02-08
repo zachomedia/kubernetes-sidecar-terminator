@@ -136,7 +136,7 @@ func (st *SidecarTerminator) terminate(pod *v1.Pod) error {
 			// TODO: Add ability to kill the proper process
 			// May require looking into the OCI image to extract the entrypoint if not
 			// available via the containers' command.
-			if *pod.Spec.ShareProcessNamespace {
+			if pod.Spec.ShareProcessNamespace != nil && *pod.Spec.ShareProcessNamespace {
 				klog.Error("Containers are sharing process namespace: ending process 1 will not end sidecars.")
 				return fmt.Errorf("unable to end sidecar %s in pod %s using shareProcessNamespace", sidecar.Name, podName(pod))
 			}
