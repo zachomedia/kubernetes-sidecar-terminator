@@ -1,0 +1,36 @@
+# This workflow will build a docker container, publish it to Azure Container Registry, and deploy it to Azure Kubernetes Service using a helm chart.
+#
+# https://github.com/Azure/actions-workflow-samples/tree/master/Kubernetes
+#
+# To configure this workflow:
+#
+# 1. Set up the following secrets in your workspace:
+#     a. REGISTRY_USERNAME with ACR username
+#     b. REGISTRY_PASSWORD with ACR Password
+#     c. AZURE_CREDENTIALS with the output of `az ad sp create-for-rbac --sdk-auth`
+#
+# 2. Change the values for the REGISTRY_NAME, CLUSTER_NAME, CLUSTER_RESOURCE_GROUP and NAMESPACE environment variables (below).
+name: build
+on: [pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+
+    # Container build
+    - name: Build
+      id: docker_build
+      uses: docker/build-push-action@v2
+      with:
+        push: false
+        tags: statcan/kubernetes-sidecar-terminator:${{ github.sha }}
+
+    # Scan image for vulnerabilities
+    - name: Scan
+      uses: Azure/container-scan@v0
+      with:
+        image-name: statcan/kubernetes-sidecar-terminator:${{ github.sha }}
+        severity-threshold: CRITICAL
+        run-quality-checks: false
