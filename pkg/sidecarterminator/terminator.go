@@ -143,6 +143,12 @@ func (st *SidecarTerminator) terminate(pod *v1.Pod) error {
 
 			klog.Infof("Terminating sidecar %s from %s with signal %d", sidecar.Name, podName(pod), st.sidecars[sidecar.Name])
 
+			securityContext, err := getSidecarSecurityContext(pod, sidecar.Name)
+			if err != nil {
+				klog.Errorf(err.Error())
+				return err
+			}
+
 			pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, v1.EphemeralContainer{
 				TargetContainerName: sidecar.Name,
 				EphemeralContainerCommon: v1.EphemeralContainerCommon{
@@ -156,10 +162,11 @@ func (st *SidecarTerminator) terminate(pod *v1.Pod) error {
 						"1",
 					},
 					ImagePullPolicy: v1.PullAlways,
+					SecurityContext: securityContext,
 				},
 			})
 
-			_, err := st.clientset.CoreV1().Pods(pod.Namespace).UpdateEphemeralContainers(context.TODO(), pod.Name, pod, metav1.UpdateOptions{})
+			_, err = st.clientset.CoreV1().Pods(pod.Namespace).UpdateEphemeralContainers(context.TODO(), pod.Name, pod, metav1.UpdateOptions{})
 			if err != nil {
 				return err
 			}

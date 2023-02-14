@@ -78,3 +78,13 @@ func hasSidecarTerminatorContainer(pod *v1.Pod, sidecar v1.ContainerStatus) bool
 func generateSidecarTerminatorContainerName(sidecarName string) string {
 	return fmt.Sprintf("%s-%s", SidecarTerminatorContainerNamePrefix, sidecarName)
 }
+
+func getSidecarSecurityContext(pod *v1.Pod, sidecar string) (*v1.SecurityContext, error) {
+	for _, container := range pod.Spec.Containers {
+		if container.Name == sidecar {
+			return container.SecurityContext, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to get security context of %s sidecar in %s/%s", sidecar, pod.Namespace, pod.Name)
+}
