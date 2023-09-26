@@ -1,9 +1,9 @@
 ---
 name: Build operator container image
-on: [push]
-  # push:
-  #   tags:
-  #     - "*" # Only runs on pushes with a tag
+on:
+  push:
+    tags:
+      - "*" # Only runs on pushes with a tag
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
